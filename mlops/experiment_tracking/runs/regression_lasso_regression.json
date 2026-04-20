@@ -1,0 +1,16 @@
+{
+  "run_id": "36ee5824",
+  "model": "Lasso Regression",
+  "type": "regression",
+  "timestamp": "2026-04-20T03:20:13.171821Z",
+  "params": {
+    "alpha": 0.1,
+    "max_iter": 2000
+  },
+  "metrics": {
+    "mae": 2.7272,
+    "mse": 16.9544,
+    "rmse": 4.1176,
+    "r2_score": 0.4376
+  }
+}

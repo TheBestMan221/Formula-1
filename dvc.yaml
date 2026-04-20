@@ -1,0 +1,102 @@
+stages:
+  data_ingestion:
+    cmd: python ml_pipeline/data_ingestion.py
+    deps:
+      - ml_pipeline/data_ingestion.py
+    params:
+      - params.yaml:
+          - data.n_races
+          - data.seasons_from
+          - data.seasons_to
+    outs:
+      - backend/data/f1_races.csv
+      - backend/data/lap_times.csv
+      - backend/data/pit_stops.csv
+    metrics:
+      - mlops/experiment_tracking/ingestion_metrics.json:
+          cache: false
+
+  feature_engineering:
+    cmd: python ml_pipeline/feature_engineering.py
+    deps:
+      - ml_pipeline/feature_engineering.py
+      - backend/data/f1_races.csv
+    params:
+      - params.yaml:
+          - features.use_elo
+          - features.use_track_affinity
+          - features.rolling_windows
+    outs:
+      - backend/data/f1_races_featured.csv
+    metrics:
+      - mlops/experiment_tracking/feature_metrics.json:
+          cache: false
+
+  preprocessing:
+    cmd: python ml_pipeline/preprocessing.py
+    deps:
+      - ml_pipeline/preprocessing.py
+      - backend/data/f1_races_featured.csv
+    params:
+      - params.yaml:
+          - data.test_size
+          - data.random_state
+          - features.scale_method
+    outs:
+      - backend/data/f1_processed.csv
+      - backend/models/encoders.pkl
+      - backend/models/scaler.pkl
+      - backend/models/feature_cols.pkl
+
+  training:
+    cmd: python ml_pipeline/train.py
+    deps:
+      - ml_pipeline/train.py
+      - ml_pipeline/preprocessing.py
+      - backend/data/f1_races_featured.csv
+      - backend/models/encoders.pkl
+      - params.yaml
+    params:
+      - params.yaml:
+          - classification
+          - regression
+          - clustering
+    outs:
+      - backend/models/cls_random_forest.pkl
+      - backend/models/cls_logistic_regression.pkl
+      - backend/models/cls_decision_tree.pkl
+      - backend/models/cls_svm.pkl
+      - backend/models/cls_naive_bayes.pkl
+      - backend/models/reg_linear_regression.pkl
+      - backend/models/reg_ridge_regression.pkl
+      - backend/models/reg_lasso_regression.pkl
+      - backend/models/pole_rf.pkl
+      - backend/models/kmeans_drivers.pkl
+      - backend/data/driver_clusters.csv
+    metrics:
+      - backend/models/training_results.json:
+          cache: false
+
+  evaluation:
+    cmd: python ml_pipeline/evaluate.py
+    deps:
+      - ml_pipeline/evaluate.py
+      - backend/models/cls_random_forest.pkl
+      - backend/models/reg_ridge_regression.pkl
+      - backend/data/f1_processed.csv
+    params:
+      - params.yaml:
+          - evaluation
+    metrics:
+      - backend/models/evaluation_report.json:
+          cache: false
+
+  model_registry:
+    cmd: python mlops/model_registry/register_models.py
+    deps:
+      - mlops/model_registry/register_models.py
+      - backend/models/training_results.json
+      - backend/models/evaluation_report.json
+    outs:
+      - mlops/model_registry/registry.json:
+          cache: false

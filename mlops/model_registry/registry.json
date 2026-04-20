@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "registered_at": "2026-04-20T03:20:21.585359Z",
+  "git_commit": "no-git",
+  "quality_gates_passed": false,
+  "quality_gate_failures": [
+    "Best R\u00b2 -0.4104 < gate 0.3"
+  ],
+  "champion": {
+    "classification": "Logistic Regression",
+    "regression": "Linear Regression",
+    "classification_metrics": {
+      "accuracy": 0.7782,
+      "precision": 0.7782,
+      "recall": 1.0,
+      "f1_score": 0.8753,
+      "roc_auc": 0.6012,
+      "confusion_matrix": [
+        [
+          0,
+          1952
+        ],
+        [
+          0,
+          6848
+        ]
+      ]
+    },
+    "regression_metrics": {
+      "mae": 4.4433,
+      "mse": 42.5162,
+      "rmse": 6.5204,
+      "r2_score": -0.4104
+    }
+  },
+  "stage": "staging",
+  "models": {
+    "cls_random_forest": {
+      "file": "cls_random_forest.pkl",
+      "exists": true,
+      "size_kb": 26133.6,
+      "sha256": "ff2efa39b1b1c5e3"
+    },
+    "cls_logistic_regression": {
+      "file": "cls_logistic_regression.pkl",
+      "exists": true,
+      "size_kb": 1.5,
+      "sha256": "b292e792a4b2161f"
+    },
+    "cls_decision_tree": {
+      "file": "cls_decision_tree.pkl",
+      "exists": true,
+      "size_kb": 34.4,
+      "sha256": "fca0c833dbd69d1b"
+    },
+    "cls_svm": {
+      "file": "cls_svm.pkl",
+      "exists": true,
+      "size_kb": 1952.4,
+      "sha256": "bd4254473d9a99a8"
+    },
+    "cls_naive_bayes": {
+      "file": "cls_naive_bayes.pkl",
+      "exists": true,
+      "size_kb": 1.8,
+      "sha256": "6f64b7d78cd17b01"
+    },
+    "reg_linear_regression": {
+      "file": "reg_linear_regression.pkl",
+      "exists": true,
+      "size_kb": 1.3,
+      "sha256": "82002c31d2c1937d"
+    },
+    "reg_ridge_regression": {
+      "file": "reg_ridge_regression.pkl",
+      "exists": true,
+      "size_kb": 1.2,
+      "sha256": "d55cde31e8371514"
+    },
+    "reg_lasso_regression": {
+      "file": "reg_lasso_regression.pkl",
+      "exists": true,
+      "size_kb": 1.3,
+      "sha256": "6e3fe0f1c730917e"
+    },
+    "pole_rf": {
+      "file": "pole_rf.pkl",
+      "exists": true,
+      "size_kb": 432.3,
+      "sha256": "bbc7e8608f491b36"
+    },
+    "kmeans_drivers": {
+      "file": "kmeans_drivers.pkl",
+      "exists": true,
+      "size_kb": 0.9,
+      "sha256": "30387f61b1c4b278"
+    }
+  },
+  "all_metrics": {
+    "classification": {
+      "Logistic Regression": {
+        "accuracy": 0.7782,
+        "precision": 0.7782,
+        "recall": 1.0,
+        "f1_score": 0.8753,
+        "roc_auc": 0.6012,
+        "confusion_matrix": [
+          [
+            0,
+            1952
+          ],
+          [
+            0,
+            6848
+          ]
+        ]
+      },
+      "Decision Tree": {
+        "accuracy": 0.7782,
+        "precision": 0.7782,
+        "recall": 1.0,
+        "f1_score": 0.8753,
+        "roc_auc": 0.5,
+        "confusion_matrix": [
+          [
+            0,
+            1952
+          ],
+          [
+            0,
+            6848
+          ]
+        ]
+      },
+      "Random Forest": {
+        "accuracy": 0.7782,
+        "precision": 0.7782,
+        "recall": 1.0,
+        "f1_score": 0.8753,
+        "roc_auc": 0.5317,
+        "confusion_matrix": [
+          [
+            0,
+            1952
+          ],
+          [
+            0,
+            6848
+          ]
+        ]
+      },
+      "SVM": {
+        "accuracy": 0.7782,
+        "precision": 0.7782,
+        "recall": 1.0,
+        "f1_score": 0.8753,
+        "roc_auc": 0.5,
+        "confusion_matrix": [
+          [
+            0,
+            1952
+          ],
+          [
+            0,
+            6848
+          ]
+        ]
+      },
+      "Naive Bayes": {
+        "accuracy": 0.7782,
+        "precision": 0.7782,
+        "recall": 1.0,
+        "f1_score": 0.8753,
+        "roc_auc": 0.5,
+        "confusion_matrix": [
+          [
+            0,
+            1952
+          ],
+          [
+            0,
+            6848
+          ]
+        ]
+      }
+    },
+    "regression": {
+      "Linear Regression": {
+        "mae": 4.4433,
+        "mse": 42.5162,
+        "rmse": 6.5204,
+        "r2_score": -0.4104
+      },
+      "Ridge Regression": {
+        "mae": 4.4447,
+        "mse": 42.5755,
+        "rmse": 6.525,
+        "r2_score": -0.4124
+      },
+      "Lasso Regression": {
+        "mae": 4.4316,
+        "mse": 43.0928,
+        "rmse": 6.5645,
+        "r2_score": -0.4295
+      }
+    },
+    "pole": {
+      "accuracy": 1.0,
+      "f1_score": 1.0
+    },
+    "clustering": {
+      "inertia": 1.08,
+      "n_clusters": 4
+    }
+  },
+  "params_snapshot": {
+    "data": {
+      "n_races": 2200,
+      "test_size": 0.2,
+      "random_state": 42,
+      "seasons_from": 2010,
+      "seasons_to": 2024
+    },
+    "features": {
+      "rolling_windows": [
+        3,
+        5
+      ],
+      "scale_method": "standard",
+      "encode_method": "label",
+      "use_elo": true,
+      "use_track_affinity": true,
+      "use_rolling_stats": true,
+      "use_wet_performance": true
+    }
+  },
+  "history": []
+}

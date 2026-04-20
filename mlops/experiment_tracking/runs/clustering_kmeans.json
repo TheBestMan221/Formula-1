@@ -1,0 +1,17 @@
+{
+  "run_id": "c21f93bc",
+  "model": "KMeans",
+  "type": "clustering",
+  "timestamp": "2026-04-20T03:20:16.388923Z",
+  "params": {
+    "n_clusters": 4,
+    "init": "k-means++",
+    "n_init": 20,
+    "max_iter": 300,
+    "random_state": 42
+  },
+  "metrics": {
+    "inertia": 1.0800913499834714,
+    "n_clusters": 4
+  }
+}

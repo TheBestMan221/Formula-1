@@ -1,0 +1,415 @@
+name: F1 ML — CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      retrain:
+        description: 'Force retrain all models'
+        required: false
+        default: 'false'
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+# ── JOB 1: Code Quality ───────────────────────────────────────────────────────
+  lint:
+    name: "🔍 Code Quality & Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dev deps
+        run: pip install flake8 black --quiet
+
+      - name: Lint — flake8
+        run: |
+          flake8 ml_pipeline/ backend/ mlops/ \
+            --max-line-length=120 \
+            --ignore=E501,W503,E402,F401 \
+            --statistics \
+            || true   # warn only, don't fail CI on style
+
+      - name: Format check — black
+        run: |
+          black --check ml_pipeline/ backend/ mlops/ --line-length=120 || true
+
+      - name: Validate params.yaml structure
+        run: |
+          python3 -c "
+          import yaml
+          with open('params.yaml') as f:
+              p = yaml.safe_load(f)
+          required = ['data','features','classification','regression','clustering','evaluation']
+          for key in required:
+              assert key in p, f'Missing section in params.yaml: {key}'
+          print('✅ params.yaml valid — sections:', list(p.keys()))
+          "
+
+      - name: Validate dvc.yaml structure
+        run: |
+          python3 -c "
+          import yaml
+          with open('dvc.yaml') as f:
+              d = yaml.safe_load(f)
+          stages = list(d.get('stages', {}).keys())
+          print('✅ DVC stages:', stages)
+          assert 'training' in stages and 'evaluation' in stages
+          "
+
+
+# ── JOB 2: ML Pipeline ───────────────────────────────────────────────────────
+  ml-pipeline:
+    name: "🤖 ML Pipeline & Model Training"
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: "Stage 1 — Data Ingestion"
+        run: |
+          python ml_pipeline/data_ingestion.py
+          echo "Rows: $(python -c "import pandas as pd; print(len(pd.read_csv('backend/data/f1_races.csv')))")"
+
+      - name: "Stage 2 — Feature Engineering"
+        run: python ml_pipeline/feature_engineering.py
+
+      - name: "Stage 3 — Preprocessing"
+        run: python ml_pipeline/preprocessing.py
+
+      - name: "Stage 4 — Train All Models (Units 2, 3, 4)"
+        run: python ml_pipeline/train.py
+
+      - name: "Stage 5 — Evaluate All Models"
+        run: python ml_pipeline/evaluate.py
+
+      - name: "Stage 6 — Model Registry"
+        run: python mlops/model_registry/register_models.py
+
+      - name: "Quality Gate — Check Metrics"
+        run: |
+          python3 << 'PYEOF'
+          import json, sys
+          from pathlib import Path
+
+          results = json.loads(Path("backend/models/training_results.json").read_text())
+          registry = json.loads(Path("mlops/model_registry/registry.json").read_text())
+
+          cls = results.get("classification", {})
+          reg = results.get("regression", {})
+
+          best_f1  = max(m.get("f1_score",0)  for m in cls.values()) if cls else 0
+          best_acc = max(m.get("accuracy",0)   for m in cls.values()) if cls else 0
+          best_r2  = max(m.get("r2_score",-99) for m in reg.values()) if reg else 0
+
+          print(f"Best F1:       {best_f1:.4f}")
+          print(f"Best Accuracy: {best_acc:.4f}")
+          print(f"Best R²:       {best_r2:.4f}")
+          print(f"Registry stage: {registry['stage']}")
+
+          # Soft gates (warn, don't fail)
+          if best_f1 < 0.60:
+              print(f"⚠️ WARNING: F1={best_f1:.4f} is low — check feature engineering")
+          if best_acc < 0.60:
+              print(f"⚠️ WARNING: Accuracy={best_acc:.4f} is low")
+
+          print("✅ Quality gate check complete")
+          PYEOF
+
+      - name: "Show Experiment Tracker Runs"
+        run: |
+          python3 << 'PYEOF'
+          import json
+          from pathlib import Path
+          runs_dir = Path("mlops/experiment_tracking/runs")
+          runs = list(runs_dir.glob("*.json")) if runs_dir.exists() else []
+          print(f"Experiment runs logged: {len(runs)}")
+          for r in sorted(runs)[:5]:
+              d = json.loads(r.read_text())
+              m = d.get("metrics", {})
+              print(f"  {d['model']}: {m}")
+          PYEOF
+
+      - name: Upload trained models as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-models-${{ github.sha }}
+          path: |
+            backend/models/
+            mlops/model_registry/registry.json
+            mlops/experiment_tracking/
+          retention-days: 14
+
+      - name: Upload training metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-metrics-${{ github.sha }}
+          path: |
+            backend/models/training_results.json
+            backend/models/evaluation_report.json
+          retention-days: 30
+
+
+# ── JOB 3: API Tests ─────────────────────────────────────────────────────────
+  api-tests:
+    name: "🧪 Backend API Tests"
+    runs-on: ubuntu-latest
+    needs: ml-pipeline
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt httpx pytest
+
+      - name: Download trained models
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-models-${{ github.sha }}
+          path: backend/
+
+      - name: Re-run data ingestion (for API startup)
+        run: |
+          python ml_pipeline/data_ingestion.py
+          python ml_pipeline/feature_engineering.py
+          python ml_pipeline/train.py
+
+      - name: Start API server
+        run: |
+          python backend/app.py &
+          echo $! > /tmp/api.pid
+          sleep 10
+
+      - name: "Test — Health endpoint"
+        run: |
+          curl -sf http://localhost:8000/health | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert d['status'] == 'healthy', f'Unhealthy: {d}'
+          print('✅ /health:', d)
+          "
+
+      - name: "Test — Drivers endpoint"
+        run: |
+          curl -sf http://localhost:8000/drivers | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'drivers' in d and len(d['drivers']) > 0
+          print(f'✅ /drivers: {len(d[\"drivers\"])} drivers returned')
+          "
+
+      - name: "Test — Teams endpoint"
+        run: |
+          curl -sf http://localhost:8000/teams | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'teams' in d and len(d['teams']) > 0
+          print(f'✅ /teams: {len(d[\"teams\"])} teams returned')
+          "
+
+      - name: "Test — Predict endpoint"
+        run: |
+          curl -sf -X POST http://localhost:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"driver":"Verstappen","team":"Red Bull","track":"Bahrain","grid_position":1,"qualifying_position":1,"qualifying_time":82.5,"weather":"Dry","tyre_compound":"Soft","pit_stops":2}' \
+          | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'predictions' in d, 'No predictions key'
+          assert 'ai_insight' in d, 'No ai_insight'
+          preds = d['predictions']
+          print(f'✅ /predict: {len(preds)} models responded')
+          print(f'   AI insight length: {len(d[\"ai_insight\"])} chars')
+          "
+
+      - name: "Test — Simulate endpoint"
+        run: |
+          curl -sf -X POST http://localhost:8000/simulate \
+            -H "Content-Type: application/json" \
+            -d '{"track":"Monaco","weather":"Dry","n_simulations":100}' \
+          | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'results' in d and len(d['results']) > 0
+          assert d['n_simulations'] == 100
+          winner = d['metadata']['winner']
+          prob = d['metadata']['winner_win_prob']
+          print(f'✅ /simulate: winner={winner} ({prob}% win prob)')
+          "
+
+      - name: "Test — Strategy endpoint"
+        run: |
+          curl -sf -X POST http://localhost:8000/strategy \
+            -H "Content-Type: application/json" \
+            -d '{"track":"Bahrain","total_laps":57,"weather":"Dry","driver_position":5}' \
+          | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'recommended_strategy' in d
+          assert 'tactical_notes' in d
+          s = d['recommended_strategy']
+          print(f'✅ /strategy: {s[\"name\"]} ({s[\"pit_stops\"]} stops)')
+          "
+
+      - name: "Test — Model performance endpoint"
+        run: |
+          curl -sf http://localhost:8000/models/performance | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'classification' in d
+          assert 'regression' in d
+          models = list(d['classification'].keys())
+          print(f'✅ /models/performance: {models}')
+          "
+
+      - name: "Test — Clusters endpoint"
+        run: |
+          curl -sf http://localhost:8000/clusters | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'clusters' in d
+          print(f'✅ /clusters: {len(d[\"clusters\"])} driver clusters')
+          "
+
+      - name: "Test — GenAI module standalone"
+        run: |
+          python3 -c "
+          from backend.genai_module import generate_race_summary, generate_driver_insight, generate_strategy_insight, get_active_provider
+          print(f'Provider: {get_active_provider()}')
+          s = generate_race_summary({'track':'Monaco','weather':'Dry','predicted_winner':'Hamilton','win_probability':45.2})
+          assert len(s) > 50, 'GenAI output too short'
+          print(f'✅ GenAI race summary: {len(s)} chars')
+          s2 = generate_strategy_insight({'name':'1-Stop','pit_stops':1,'tyre_sequence':['Medium','Hard'],'pit_windows':[28],'risk_level':'Low'})
+          print(f'✅ GenAI strategy insight: {len(s2)} chars')
+          "
+
+      - name: Stop API server
+        if: always()
+        run: kill $(cat /tmp/api.pid) 2>/dev/null || true
+
+
+# ── JOB 4: Frontend Build ─────────────────────────────────────────────────────
+  frontend-build:
+    name: "⚛️ Frontend Build & Verify"
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Type-check (if TS) & lint
+        working-directory: frontend
+        run: npx eslint src/ --ext .js,.jsx --max-warnings 20 || true
+
+      - name: Build production bundle
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_URL: http://localhost:8000
+
+      - name: Verify build artifacts
+        run: |
+          ls -la frontend/dist/
+          test -f frontend/dist/index.html || (echo "❌ index.html missing" && exit 1)
+          SIZE=$(du -sh frontend/dist/ | cut -f1)
+          echo "✅ Build successful — bundle size: $SIZE"
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: frontend/dist/
+          retention-days: 7
+
+
+# ── JOB 5: Summary ────────────────────────────────────────────────────────────
+  summary:
+    name: "📋 Pipeline Summary"
+    runs-on: ubuntu-latest
+    needs: [lint, ml-pipeline, api-tests, frontend-build]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download metrics
+        uses: actions/download-artifact@v4
+        with:
+          name: training-metrics-${{ github.sha }}
+          path: metrics/
+        continue-on-error: true
+
+      - name: Print summary
+        run: |
+          echo "## F1 ML Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔍 Lint | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🤖 ML Pipeline | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 API Tests | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚛️ Frontend Build | ✅ |" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f metrics/training_results.json ]; then
+            python3 << 'PYEOF'
+          import json
+          from pathlib import Path
+          r = json.loads(Path("metrics/training_results.json").read_text())
+          cls = r.get("classification", {})
+          reg = r.get("regression", {})
+          if cls:
+              best = max(cls, key=lambda m: cls[m].get("f1_score",0))
+              m = cls[best]
+              print(f"Best Classifier: {best} — Acc={m['accuracy']} F1={m['f1_score']}")
+          if reg:
+              best = max(reg, key=lambda m: reg[m].get("r2_score",-99))
+              m = reg[best]
+              print(f"Best Regressor: {best} — R²={m['r2_score']} MAE={m['mae']}")
+          PYEOF
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY

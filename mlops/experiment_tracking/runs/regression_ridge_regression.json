@@ -1,0 +1,16 @@
+{
+  "run_id": "d45637ba",
+  "model": "Ridge Regression",
+  "type": "regression",
+  "timestamp": "2026-04-20T03:20:13.082058Z",
+  "params": {
+    "alpha": 1.0,
+    "max_iter": 1000
+  },
+  "metrics": {
+    "mae": 2.6968,
+    "mse": 16.8675,
+    "rmse": 4.107,
+    "r2_score": 0.4404
+  }
+}

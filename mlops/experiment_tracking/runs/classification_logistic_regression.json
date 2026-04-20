@@ -1,0 +1,28 @@
+{
+  "run_id": "f1968c36",
+  "model": "Logistic Regression",
+  "type": "classification",
+  "timestamp": "2026-04-20T03:17:14.301157Z",
+  "params": {
+    "max_iter": 1000,
+    "C": 1.0,
+    "solver": "lbfgs"
+  },
+  "metrics": {
+    "accuracy": 0.8385,
+    "precision": 0.8621,
+    "recall": 0.9433,
+    "f1_score": 0.9009,
+    "confusion_matrix": [
+      [
+        919,
+        1033
+      ],
+      [
+        388,
+        6460
+      ]
+    ],
+    "roc_auc": 0.8149
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "run_id": "209b3a1e",
+  "model": "SVM",
+  "type": "classification",
+  "timestamp": "2026-04-20T03:20:12.906155Z",
+  "params": {
+    "kernel": "rbf",
+    "C": 1.0,
+    "gamma": "scale",
+    "probability": true
+  },
+  "metrics": {
+    "accuracy": 0.8392,
+    "precision": 0.8624,
+    "recall": 0.9439,
+    "f1_score": 0.9013,
+    "confusion_matrix": [
+      [
+        921,
+        1031
+      ],
+      [
+        384,
+        6464
+      ]
+    ],
+    "roc_auc": 0.7854
+  }
+}

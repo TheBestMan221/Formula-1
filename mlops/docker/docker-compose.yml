@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: mlops/docker/Dockerfile.backend
+    image: f1-ml-backend:latest
+    container_name: f1_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ENV=production
+      - LOG_LEVEL=info
+    volumes:
+      - ../../backend/models:/app/backend/models
+      - ../../backend/data:/app/backend/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - f1network
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: mlops/docker/Dockerfile.frontend
+    image: f1-ml-frontend:latest
+    container_name: f1_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    restart: unless-stopped
+    networks:
+      - f1network
+
+networks:
+  f1network:
+    driver: bridge
+
+volumes:
+  model_data:
+  race_data:

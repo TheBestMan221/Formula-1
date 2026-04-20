@@ -1,0 +1,32 @@
+FROM python:3.11-slim
+
+LABEL maintainer="F1 ML Team"
+LABEL description="F1 Race Prediction API"
+
+# System deps
+RUN apt-get update && apt-get install -y \
+    gcc g++ curl git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python deps first (layer caching)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY backend/ ./backend/
+COPY ml_pipeline/ ./ml_pipeline/
+COPY mlops/ ./mlops/
+COPY params.yaml .
+
+# Run pipeline if models don't exist
+COPY mlops/scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]

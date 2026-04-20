@@ -1,0 +1,28 @@
+{
+  "run_id": "f0021117",
+  "model": "Decision Tree",
+  "type": "classification",
+  "timestamp": "2026-04-20T03:17:14.509615Z",
+  "params": {
+    "max_depth": 8,
+    "min_samples_split": 20,
+    "min_samples_leaf": 10
+  },
+  "metrics": {
+    "accuracy": 0.8301,
+    "precision": 0.8687,
+    "recall": 0.9209,
+    "f1_score": 0.894,
+    "confusion_matrix": [
+      [
+        999,
+        953
+      ],
+      [
+        542,
+        6306
+      ]
+    ],
+    "roc_auc": 0.7997
+  }
+}

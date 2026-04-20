@@ -1,0 +1,13 @@
+{
+  "run_id": "0836e46b",
+  "model": "Linear Regression",
+  "type": "regression",
+  "timestamp": "2026-04-20T03:20:12.974712Z",
+  "params": {},
+  "metrics": {
+    "mae": 2.6968,
+    "mse": 16.8675,
+    "rmse": 4.107,
+    "r2_score": 0.4404
+  }
+}

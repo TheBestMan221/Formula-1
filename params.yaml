@@ -1,0 +1,76 @@
+# params.yaml
+# Central parameter store for DVC pipeline
+# Change any value here and run `dvc repro` to retrain
+
+data:
+  n_races: 2200
+  test_size: 0.2
+  random_state: 42
+  seasons_from: 2010
+  seasons_to: 2024
+
+features:
+  rolling_windows: [3, 5]
+  scale_method: standard       # standard | minmax | robust
+  encode_method: label         # label | onehot
+  use_elo: true
+  use_track_affinity: true
+  use_rolling_stats: true
+  use_wet_performance: true
+
+classification:
+  target: top10_finish         # top10_finish | podium
+  models:
+    logistic_regression:
+      max_iter: 1000
+      C: 1.0
+      solver: lbfgs
+    decision_tree:
+      max_depth: 8
+      min_samples_split: 20
+      min_samples_leaf: 10
+    random_forest:
+      n_estimators: 200
+      max_depth: 12
+      min_samples_split: 10
+      n_jobs: -1
+    svm:
+      kernel: rbf
+      C: 1.0
+      gamma: scale
+      probability: true
+    naive_bayes:
+      var_smoothing: 1.0e-9
+
+regression:
+  target: finish_position
+  models:
+    linear_regression:
+      fit_intercept: true
+    ridge:
+      alpha: 1.0
+      max_iter: 1000
+    lasso:
+      alpha: 0.1
+      max_iter: 2000
+
+clustering:
+  n_clusters: 4
+  init: k-means++
+  n_init: 20
+  max_iter: 300
+  random_state: 42
+
+simulation:
+  n_simulations: 1000
+  dnf_rate_dry: 0.05
+  dnf_rate_wet: 0.12
+  weather_noise_dry: 1.0
+  weather_noise_wet: 2.5
+  weather_noise_mixed: 1.8
+
+evaluation:
+  classification_threshold: 0.5
+  min_accuracy_gate: 0.70      # CI/CD gate: fail if below
+  min_f1_gate: 0.70
+  min_r2_gate: 0.30
