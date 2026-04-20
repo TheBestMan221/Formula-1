@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # 🏎️ F1 Race Prediction & Strategy Recommendation System
 
 > A complete ML-based web application for Formula 1 race outcome prediction, strategy recommendation, and driver/team analytics — aligned with full ML syllabus.
@@ -251,23 +251,6 @@ Without key: rule-based insights are auto-generated (included by default).
 
 ---
 
-## 🔬 Syllabus Alignment
-
-| Unit | Concept | Implementation |
-|------|---------|----------------|
-| Unit 1 | Data Preprocessing | `preprocessing.py` — missing values, encoding, scaling |
-| Unit 1 | Feature Engineering | `feature_engineering.py` — Elo, rolling window, track affinity |
-| Unit 2 | Logistic Regression | `train.py` → `cls_logistic_regression.pkl` |
-| Unit 2 | Decision Tree | `train.py` → `cls_decision_tree.pkl` |
-| Unit 2 | Random Forest | `train.py` → `cls_random_forest.pkl` |
-| Unit 2 | SVM | `train.py` → `cls_svm.pkl` |
-| Unit 2 | Naive Bayes | `train.py` → `cls_naive_bayes.pkl` |
-| Unit 3 | Linear Regression | `train.py` → `reg_linear_regression.pkl` |
-| Unit 3 | Ridge Regression | `train.py` → `reg_ridge_regression.pkl` |
-| Unit 3 | Lasso Regression | `train.py` → `reg_lasso_regression.pkl` |
-| Unit 4 | K-Means Clustering | `train.py` → `kmeans_drivers.pkl` |
-
----
 
 ## 🔭 Future Scope
 
@@ -291,5 +274,3 @@ Without key: rule-based insights are auto-generated (included by default).
 
 *Dataset: Ergast F1 World Championship — https://www.kaggle.com/datasets/rohanrao/formula-1-world-championship-1950-2020*
 =======
-# Formula-1
->>>>>>> 62076e715125e314396fd5f854f2be34b3f0c863
