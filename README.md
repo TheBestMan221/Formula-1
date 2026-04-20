@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🏎️ F1 Race Prediction & Strategy Recommendation System
 
 > A complete ML-based web application for Formula 1 race outcome prediction, strategy recommendation, and driver/team analytics — aligned with full ML syllabus.
@@ -289,3 +290,6 @@ Without key: rule-based insights are auto-generated (included by default).
 ---
 
 *Dataset: Ergast F1 World Championship — https://www.kaggle.com/datasets/rohanrao/formula-1-world-championship-1950-2020*
+=======
+# Formula-1
+>>>>>>> 62076e715125e314396fd5f854f2be34b3f0c863
